@@ -8,7 +8,9 @@
  * https://github.com/PSP-Archive/MP3PlayerPlugin/
  * https://github.com/PSP-Archive/ARK-4/
  * https://github.com/PSP-Archive/CXMB
+ * https://github.com/PSP-Archive/CXMB_Reloaded
  */
+
 
 #include "systemctrl.h"
 #include "utils.h"
@@ -19,6 +21,8 @@
 #include <pspsdk.h>
 #include <pspsysevent.h>
 #include <psputility.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 PSP_MODULE_INFO("vshbgm", 0x1000, 1, 0);
@@ -31,16 +35,74 @@ typedef struct {
   unsigned long *c_buf;
 } DecodeData;
 
-SceUID thid = -1;
-int r_flg = 0, chan = -1, stop = 0;
-volatile int actv = 0;
-volatile u32 l_tim = 0;
+static SceUID bgm_thid = -1;
+static int r_flg = 0, chan = -1, stop = 0;
+static volatile int actv = 0;
+static volatile u32 l_tim = 0;
 
-int (*_glen)(int);
-int (*_acd)(unsigned long *, int);
-unsigned long *our_buf = NULL;
+static int (*_glen)(int);
+static int (*_acd)(unsigned long *, int);
+static unsigned long *our_buf = NULL;
 
-int acPat(unsigned long *buf, int type) {
+void *bgm_memory_alloc(u32 size) {
+  u32 alloc_size = size + 64 + sizeof(SceUID);
+  SceUID memid = sceKernelAllocPartitionMemory(2, "umem", 0, alloc_size, NULL);
+  if (memid < 0)
+    return NULL;
+
+  u32 ptr_base = (u32)sceKernelGetBlockHeadAddr(memid);
+  u32 ptr_aligned = (ptr_base + sizeof(SceUID) + 63) & ~63;
+  memcpy((void *)(ptr_aligned - sizeof(SceUID)), &memid, sizeof(SceUID));
+
+  return (void *)ptr_aligned;
+}
+
+int bgm_free_alloc(void *ptr) {
+  if (!ptr)
+    return -1;
+  SceUID memid;
+  memcpy(&memid, (void *)((u32)ptr - sizeof(SceUID)), sizeof(SceUID));
+  return sceKernelFreePartitionMemory(memid);
+}
+
+u32 bgm_find_func(char *lib, char *name, u32 nid) {
+  return sctrlHENFindFunction(lib, name, nid);
+}
+
+int bgm_check_audio_active(int (*glen)(int), int our_chan) {
+  if (!glen)
+    return 0;
+  for (int i = 0; i < 8; i++) {
+    if (i != our_chan) {
+      int len = glen(i);
+      if (len > 2000)
+        return 1;
+    }
+  }
+  return 0;
+}
+
+int bgm_Get_Framesize(u8 *buf) {
+  u32 header = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+
+  if (((header & 0x180000) >> 19) != 3)
+    return 0;
+
+  if (((header & 0x60000) >> 17) != 1)
+    return 0;
+
+  int bitrate = (header & 0xF000) >> 12;
+  int padding = (header & 0x200) >> 9;
+
+  if (bitrate == 9)
+    return 417 + padding;
+  if (bitrate == 11)
+    return 626 + padding;
+
+  return 0;
+}
+
+static int acPat(unsigned long *buf, int type) {
   if (buf != our_buf && (type == 0x00001000 || type == 0x00001001 ||
                          type == 0x00001002 || type == 0x00001003)) {
     actv = 1;
@@ -49,18 +111,18 @@ int acPat(unsigned long *buf, int type) {
   return _acd(buf, type);
 }
 
-void Hook(void) {
+static void Hook(void) {
   if (_acd)
     return;
 
-  u32 g = find_func("sceAudio_Driver", "sceAudio", 0xB011922F);
+  u32 g = bgm_find_func("sceAudio_Driver", "sceAudio", 0xB011922F);
   if (!g)
-    g = find_func("sceAudio", "sceAudio", 0xB011922F);
+    g = bgm_find_func("sceAudio", "sceAudio", 0xB011922F);
 
   if (g)
     _glen = (void *)g;
 
-  u32 a = find_func("sceAudiocodec", "sceAudiocodec", 0x70A703F8);
+  u32 a = bgm_find_func("sceAudiocodec", "sceAudiocodec", 0x70A703F8);
   if (a) {
     _acd = (void *)a;
     sctrlHENPatchSyscall((void *)a, acPat);
@@ -70,7 +132,7 @@ void Hook(void) {
   sceKernelIcacheClearAll();
 }
 
-int MP3_Init(const char *file, DecodeData *mp3) {
+static int MP3_Init(const char *file, DecodeData *mp3) {
   if ((mp3->hnd = sceIoOpen(file, PSP_O_RDONLY, 0777)) < 0)
     return -1;
   mp3->f_sz = sceIoLseek32(mp3->hnd, 0, PSP_SEEK_END);
@@ -83,14 +145,11 @@ int MP3_Init(const char *file, DecodeData *mp3) {
   mp3->d_st0 = mp3->d_st;
   sceIoLseek32(mp3->hnd, mp3->d_st, PSP_SEEK_SET);
 
-  mp3->d_st0 = mp3->d_st;
-  sceIoLseek32(mp3->hnd, mp3->d_st, PSP_SEEK_SET);
-
-  if (!(mp3->c_buf = memory_alloc(sizeof(unsigned long) * 65)) ||
-      !(mp3->d_buf = memory_alloc(1152 * 4)) ||
-      !(mp3->o_buf[0] = memory_alloc(1152 * 4)) ||
-      !(mp3->o_buf[1] = memory_alloc(1152 * 4)) ||
-      !(mp3->r_buf = memory_alloc(4096)))
+  if (!(mp3->c_buf = bgm_memory_alloc(sizeof(unsigned long) * 65)) ||
+      !(mp3->d_buf = bgm_memory_alloc(1152 * 4)) ||
+      !(mp3->o_buf[0] = bgm_memory_alloc(1152 * 4)) ||
+      !(mp3->o_buf[1] = bgm_memory_alloc(1152 * 4)) ||
+      !(mp3->r_buf = bgm_memory_alloc(4096)))
     return -1;
 
   our_buf = mp3->c_buf;
@@ -99,22 +158,22 @@ int MP3_Init(const char *file, DecodeData *mp3) {
   memset(mp3->o_buf[0], 0, 1152 * 4);
   memset(mp3->o_buf[1], 0, 1152 * 4);
 
-  if (K_CALL(sceAudiocodecCheckNeedMem, mp3->c_buf, PSP_CODEC_MP3) < 0 ||
-      K_CALL(sceAudiocodecGetEDRAM, mp3->c_buf, PSP_CODEC_MP3) < 0 ||
-      K_CALL(sceAudiocodecInit, mp3->c_buf, PSP_CODEC_MP3) < 0)
+  if (sceAudiocodecCheckNeedMem(mp3->c_buf, PSP_CODEC_MP3) < 0 ||
+      sceAudiocodecGetEDRAM(mp3->c_buf, PSP_CODEC_MP3) < 0 ||
+      sceAudiocodecInit(mp3->c_buf, PSP_CODEC_MP3) < 0)
     return -1;
   mp3->fr_sz = 0;
   mp3->o_num = 1;
   return 0;
 }
 
-int MP3_End(DecodeData *mp3) {
-  K_CALL_VOID(sceAudiocodecReleaseEDRAM, mp3->c_buf);
-  free_alloc(mp3->r_buf);
-  free_alloc(mp3->c_buf);
-  free_alloc(mp3->d_buf);
-  free_alloc(mp3->o_buf[0]);
-  free_alloc(mp3->o_buf[1]);
+static int MP3_End(DecodeData *mp3) {
+  sceAudiocodecReleaseEDRAM(mp3->c_buf);
+  bgm_free_alloc(mp3->r_buf);
+  bgm_free_alloc(mp3->c_buf);
+  bgm_free_alloc(mp3->d_buf);
+  bgm_free_alloc(mp3->o_buf[0]);
+  bgm_free_alloc(mp3->o_buf[1]);
   mp3->r_buf = mp3->d_buf = mp3->o_buf[0] = mp3->o_buf[1] = NULL;
   mp3->c_buf = NULL;
   sceIoClose(mp3->hnd);
@@ -122,54 +181,138 @@ int MP3_End(DecodeData *mp3) {
   return 0;
 }
 
-int MP3_Decode(DecodeData *mp3) {
-  u8 buf[4];
-  if (sceIoRead(mp3->hnd, buf, 4) != 4)
-    return -1;
-  if ((mp3->fr_sz = Get_Framesize(buf)) <= 0)
-    return -1;
-
-  if (mp3->fr_sz > 4096)
-    return -1;
-
+static int MP3_Decode(DecodeData *mp3) {
   sceIoLseek32(mp3->hnd, mp3->d_st, PSP_SEEK_SET);
-  if (sceIoRead(mp3->hnd, mp3->r_buf, mp3->fr_sz) != mp3->fr_sz)
+
+  int read_len = sceIoRead(mp3->hnd, mp3->r_buf, 1024);
+  if (read_len < 4)
+    return -1;
+
+  if ((mp3->fr_sz = bgm_Get_Framesize(mp3->r_buf)) <= 0)
+    return -1;
+
+  if (mp3->fr_sz > read_len)
     return -1;
   mp3->c_buf[6] = (unsigned long)mp3->r_buf;
   mp3->c_buf[8] = (unsigned long)mp3->d_buf;
   mp3->c_buf[7] = mp3->c_buf[10] = mp3->fr_sz;
   mp3->c_buf[9] = (1152 * 4);
-  if (K_CALL(sceAudiocodecDecode, mp3->c_buf, PSP_CODEC_MP3) < 0)
+  if (sceAudiocodecDecode(mp3->c_buf, PSP_CODEC_MP3) < 0)
     return -1;
   memcpy(mp3->o_buf[mp3->o_num ^= 1], mp3->d_buf, 1152 * 4);
   return ((mp3->d_st += mp3->fr_sz) >= mp3->f_sz) ? 1 : 0;
 }
 
-int Suspend_Handler(int id, char *name, void *prm, int *res) {
+static int Suspend_Handler(int id, char *name, void *prm, int *res) {
   if (id == 0x100 || id == 0x400) {
+    if (id == 0x400)
+      sceKernelDelayThread(1000000);
     r_flg = 1;
-    sceKernelDelayThread(800000);
-
-    sceKernelDelayThread(800000);
   }
   return 0;
 }
 
-PspSysEventHandler events = {0x40, "Suspend_Event", 0x0000FF00,
-                             Suspend_Handler};
+PspSysEventHandler bgm_events = {0x40, "Suspend_Event", 0x0000FF00,
+                                 Suspend_Handler};
 
-int vshbgm_thread(SceSize args, void *argp) {
+static SceUID get_thread_id(const char *name) {
+  int ret, count, i;
+  SceUID ids[128];
+
+  ret = sceKernelGetThreadmanIdList(SCE_KERNEL_TMID_Thread, ids, sizeof(ids),
+                                    &count);
+  if (ret < 0)
+    return -1;
+
+  for (i = 0; i < count; ++i) {
+    SceKernelThreadInfo info;
+    info.size = sizeof(info);
+    ret = sceKernelReferThreadStatus(ids[i], &info);
+    if (ret < 0)
+      continue;
+    if (strcmp(info.name, name) == 0)
+      return ids[i];
+  }
+  return -2;
+}
+
+static int is_player_active(void) {
+  if (get_thread_id("VshCacheIoPrefetchThread") >= 0)
+    return 1;
+
+  if (get_thread_id("VideoDecoder") >= 0 || get_thread_id("AudioDecoder") >= 0)
+    return 1;
+
+  if (sceKernelFindModuleByName("sceUSB_Stor_Driver"))
+    return 1;
+
+  if (sceKernelFindModuleByName("camera_plugin_module"))
+    return 2;
+  if (sceKernelFindModuleByName("tdb_plugin_module"))
+    return 2;
+  if (sceKernelFindModuleByName("radioshack_plugin_module"))
+    return 1;
+  if (sceKernelFindModuleByName("skype_main_plugin_module"))
+    return 1;
+
+  return 0;
+}
+
+static int simple_atoi(const char *s) {
+  int res = 0;
+  while (*s >= '0' && *s <= '9') {
+    res = res * 10 + (*s - '0');
+    s++;
+  }
+  return res;
+}
+
+static int GetVolume(void) {
+  SceUID fd = sceIoOpen("ms0:/seplugins/vshbgm_volume.txt", PSP_O_RDONLY, 0777);
+  if (fd >= 0) {
+    char buf[8];
+    int len = sceIoRead(fd, buf, sizeof(buf) - 1);
+    sceIoClose(fd);
+    if (len > 0) {
+      buf[len] = '\0';
+      int val = simple_atoi(buf);
+      if (val >= 0 && val <= 100)
+        return val;
+    }
+  }
+
+  fd = sceIoOpen("ms0:/seplugins/vshbgm_volume.txt",
+                 PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
+  if (fd >= 0) {
+    sceIoWrite(fd, "50", 2);
+    sceIoClose(fd);
+  }
+  return 50;
+}
+
+static int vshbgm_thread(SceSize args, void *argp) {
   DecodeData mp3;
   while (!sceKernelFindModuleByName("sceVshCommonUtil_Module"))
     sceKernelDelayThread(100000);
-  sceKernelDelayThread(6000000);
+  while (!sceKernelFindModuleByName("scePaf_Module"))
+    sceKernelDelayThread(100000);
+  while (!sceKernelFindModuleByName("sceVshCommonGui_Module"))
+    sceKernelDelayThread(100000);
+  sceKernelDelayThread(1000000);
   sceUtilityLoadAvModule(PSP_AV_MODULE_AVCODEC);
 
   Hook();
   sceKernelDelayThread(3000000);
-restart:
-  while (MP3_Init("ms0:/bgm.mp3", &mp3) < 0)
+
+restart:;
+  while (1) {
+    if (MP3_Init("ms0:/seplugins/cxmb/bgm.mp3", &mp3) == 0)
+      break;
+    if (MP3_Init("ms0:/bgm.mp3", &mp3) == 0)
+      break;
     sceKernelDelayThread(2000000);
+  }
+
   while (chan < 0 || chan > 7) {
     chan = sceAudioChReserve(PSP_AUDIO_NEXT_CHANNEL, 1152,
                              PSP_AUDIO_FORMAT_STEREO);
@@ -178,24 +321,31 @@ restart:
   }
   r_flg = 0;
   int in_media = 0;
+  int check_counter = 0;
+
+  int vol = GetVolume();
+  int max_vol = (0x8000 * vol) / 100;
+
   while (!stop) {
     sceKernelDelayThread(10000);
-    if (check_audio_active(_glen, chan)) {
-      actv = 1;
-      l_tim = sceKernelGetSystemTimeLow();
-    } else if (actv && sceKernelGetSystemTimeLow() - l_tim > 200000) {
-      actv = 0;
-    }
 
-    if (sceKernelFindModuleByName("music_browser_module") ||
-        sceKernelFindModuleByName("msvideo_main_plugin_module") ||
-        sceKernelFindModuleByName("video_plugin_module")) {
-      actv = 1;
-      l_tim = sceKernelGetSystemTimeLow();
-      in_media = 1;
-    } else if (in_media) {
-      actv = 0;
-      in_media = 0;
+    if (check_counter++ >= 3) {
+      check_counter = 0;
+      if (bgm_check_audio_active(_glen, chan)) {
+        actv = 1;
+        l_tim = sceKernelGetSystemTimeLow();
+      } else if (actv && sceKernelGetSystemTimeLow() - l_tim > 200000) {
+        actv = 0;
+      }
+
+      if (is_player_active()) {
+        actv = 1;
+        l_tim = sceKernelGetSystemTimeLow();
+        in_media = 1;
+      } else if (in_media) {
+        actv = 0;
+        in_media = 0;
+      }
     }
     if (r_flg) {
       MP3_End(&mp3);
@@ -203,10 +353,12 @@ restart:
       sceKernelDelayThread(2000000);
       goto restart;
     }
+
     if (actv) {
       sceKernelDelayThread(100000);
       continue;
     }
+
     int res = MP3_Decode(&mp3);
     if (res < 0) {
       MP3_End(&mp3);
@@ -214,20 +366,19 @@ restart:
       goto restart;
     }
     if (res == 1) {
-      mp3.d_st = mp3.d_st0;
-      sceIoLseek32(mp3.hnd, mp3.d_st, PSP_SEEK_SET);
-      continue;
+      MP3_End(&mp3);
+      goto restart;
     }
-    sceAudioOutputBlocking(chan, PSP_AUDIO_VOLUME_MAX, mp3.o_buf[mp3.o_num]);
+    sceAudioOutputBlocking(chan, max_vol, mp3.o_buf[mp3.o_num]);
   }
   return 0;
 }
 
 int module_start(SceSize args, void *argp) {
-  sceKernelRegisterSysEventHandler(&events);
-  if ((thid = sceKernelCreateThread("vshbgm", vshbgm_thread, 0x1, 0x1000, 0,
-                                    NULL)) >= 0)
-    sceKernelStartThread(thid, 0, 0);
+  sceKernelRegisterSysEventHandler(&bgm_events);
+  if ((bgm_thid = sceKernelCreateThread("vshbgm", vshbgm_thread, 0x12, 0x1000,
+                                        0, NULL)) >= 0)
+    sceKernelStartThread(bgm_thid, 0, 0);
   return 0;
 }
 
@@ -242,11 +393,11 @@ int module_stop(SceSize args, void *argp) {
     sctrlHENPatchSyscall((void *)_acd, (void *)_acd);
     _acd = NULL;
   }
-  if (thid >= 0) {
-    sceKernelWaitThreadEnd(thid, NULL);
-    sceKernelDeleteThread(thid);
-    thid = -1;
+  if (bgm_thid >= 0) {
+    sceKernelWaitThreadEnd(bgm_thid, NULL);
+    sceKernelDeleteThread(bgm_thid);
+    bgm_thid = -1;
   }
-  sceKernelUnregisterSysEventHandler(&events);
+  sceKernelUnregisterSysEventHandler(&bgm_events);
   return 0;
 }
