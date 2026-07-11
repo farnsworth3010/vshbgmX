@@ -5,6 +5,8 @@ It plays user MP3 in VSH (XMB) and prioritizes stable playback by auto-pausing i
 
 ## Demo 🎬
 
+[demo/demo.mp4](demo/demo.mp4)
+
 ## Highlights ✨
 
 - Background music playback in XMB.

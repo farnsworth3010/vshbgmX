@@ -598,7 +598,6 @@ restart:;
 
   while (!stop) {
     u32 now = sceKernelGetSystemTimeLow();
-
     sceKernelDelayThread(cfg.loop_sleep_us);
 
     if (!g_plugin_enabled) {
