@@ -10,11 +10,13 @@ https://github.com/user-attachments/assets/9b124b83-99d7-4bb4-82ae-6da4f2c90227
 ## Highlights
 
 - Background music playback in XMB.
-- Startup delay to avoid boot-time crackling due to VSH initialization.
 - Auto-pause when other audio activity is detected.
-- Auto-pause when system mute is enabled or system volume is zero.
-- Auto-pause while ARK VSH overlay/menu is active.
-- Auto-pause during XMB dim/underclock power-saving states to avoid audio issues and save battery.
+
+**New**:
+- Startup delay to avoid boot-time crackling due to VSH initialization.
+- Auto-pause when system mute is enabled or system volume is zero to stop Memory Stick reads and LED flashing.
+- Auto-pause while ARK VSH overlay/menu is active to avoid audio crackling.
+- Auto-pause during XMB dim/underclock power-saving states to avoid audio crackling and save battery.
 - Auto-pause on heavy Memory Stick I/O spikes.
 - Unified config support via `ms0:/seplugins/vshbgmX_config.txt`.
 
@@ -30,7 +32,7 @@ https://github.com/user-attachments/assets/9b124b83-99d7-4bb4-82ae-6da4f2c90227
    - `ms0:/bgm.mp3`
 6. Configure behavior:
    - Start from `vshbgmX_config.example.txt`
-  - Deploy as `ms0:/seplugins/vshbgmX_config.txt`
+   - Rename and put at `ms0:/seplugins/vshbgmX_config.txt`
    - If this file is missing, the plugin auto-creates it on first start.
 
 ## Audio Format
@@ -194,9 +196,8 @@ Completed:
 Planned:
 
 - [ ] Add a dedicated settings entry in PSP system settings (or equivalent dedicated settings page) for runtime plugin control (enable/disable and future options).
-- [ ] Implement this only with a safe, firmware-validated hook path to avoid boot-time instability.
 - [ ] Switching tracks.
-- [ ] Changing tracks from settings menu.
+- [ ] Switching tracks from settings menu.
 - [ ] Fade-in/fade-out transitions.
 
 ## License
