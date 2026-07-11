@@ -7,7 +7,7 @@ It plays user MP3 in VSH (XMB) and prioritizes stable playback by auto-pausing i
 
 https://github.com/user-attachments/assets/9b124b83-99d7-4bb4-82ae-6da4f2c90227
 
-## Highlights ✨
+## Highlights
 
 - Background music playback in XMB.
 - Startup delay to avoid boot-time crackling due to VSH initialization.
@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/9b124b83-99d7-4bb4-82ae-6da4f2c90227
 - Auto-pause on heavy Memory Stick I/O spikes.
 - Unified config support via `ms0:/seplugins/vshbgmX_config.txt`.
 
-## Quick Setup (PSP) 🚀
+## Quick Setup
 
 1. Download `vshbgmX.prx` from the Releases page of this repository.
 2. Disable the original `vshbgm` plugin in your plugin manager/config or in ARK Plugins Manager (to avoid conflicts and double audio).
@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/9b124b83-99d7-4bb4-82ae-6da4f2c90227
   - Deploy as `ms0:/seplugins/vshbgmX_config.txt`
    - If this file is missing, the plugin auto-creates it on first start.
 
-## Audio Format 🎵
+## Audio Format
 
 Recommended MP3 format:
 
@@ -53,7 +53,7 @@ Use the original website's online converter tool:
 https://the-sauna.icu/vshbgm/
 
 
-## Configuration ⚙️
+## Configuration
 
 Use template file in repo root as an example:
 
@@ -113,7 +113,7 @@ Units:
 - Crackling/stutter:
   - Keep `enable_io_pause=1` and `enable_idle_dim_pause=1`.
 
-## Known Issues ⚠️
+## Known Issues
 
 Reports are highly appreciated. 
 
@@ -151,7 +151,7 @@ Battery/performance impact note:
 
 - Battery life and system performance impact were not formally benchmarked/tested yet.
 
-## Credits 🙌
+## Credits
 
 - Original vshbgm author.
 - ARK Team.
