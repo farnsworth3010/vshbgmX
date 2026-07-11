@@ -150,6 +150,10 @@ Tested environment:
 
 Compatibility with other PSP models, firmware variants, CFW setups, or plugin stacks is not guaranteed.
 
+Battery/performance impact note:
+
+- Battery life and system performance impact were not formally benchmarked/tested yet.
+
 ## Credits 🙌
 
 - Original vshbgm author.
