@@ -1,0 +1,48 @@
+# vshbgmX config example
+# Place this file on PSP as:
+#   ms0:/seplugins/vshbgmX_config.txt
+# Compact template: detailed explanations are in README.
+# All *_us values are in microseconds.
+# Feature flags: 1 = enabled, 0 = disabled.
+
+# Master enable switch
+enable_plugin=1
+
+# BGM volume in percent (0..100)
+volume_percent=50
+
+# Baseline CPU clock for idle-dim detection
+baseline_cpu=133
+
+# Delay before first playback
+first_playback_delay_us=5000000
+
+# Main loop sleep
+loop_sleep_us=10000
+
+# Sleep while paused
+pause_sleep_us=100000
+
+# Pause-state check interval
+check_interval_loops=3
+
+# Decode-time threshold for IO contention
+io_spike_threshold_us=50000
+
+# Pause window after IO spike
+io_pause_window_us=1200000
+
+# Delay before resuming after external audio
+audio_resume_delay_us=3000000
+
+# Pause on idle dim/underclock
+enable_idle_dim_pause=1
+
+# Pause on mute or zero volume
+enable_mute_pause=1
+
+# Pause while overlay/menu is active
+enable_overlay_pause=1
+
+# Enable auto-pause on IO spikes
+enable_io_pause=1
