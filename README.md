@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/9b124b83-99d7-4bb4-82ae-6da4f2c90227
 - Background music playback in XMB.
 - Auto-pause when other audio activity is detected.
 
-**New**:
+**New/fixes**:
 - Startup delay to avoid boot-time crackling due to VSH initialization.
 - Auto-pause when system mute is enabled or system volume is zero to stop Memory Stick reads and LED flashing.
 - Auto-pause while ARK VSH overlay/menu is active to avoid audio crackling.
