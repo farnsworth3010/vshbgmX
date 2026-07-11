@@ -1,0 +1,86 @@
+# vshbgmX config example
+# Place this file on PSP as:
+#   ms0:/seplugins/vshbgmX_config.txt
+# If missing, the plugin will create this file automatically with default values.
+#
+# All *_us values are in microseconds.
+# Feature flags: 1 = enabled, 0 = disabled.
+
+# enable_plugin
+# Master switch for the plugin itself.
+# Will be needed in the future, when this plugin
+# gets its own settings in the interface.
+enable_plugin=1
+
+# volume_percent
+# BGM volume in percent, from 0 to 100.
+volume_percent=50
+
+# baseline_cpu
+# Normal XMB CPU clock used as fallback for idle-dim detection.
+# Helps pause BGM before power-saving states where crackling can appear
+# (screen dimming/sleep transitions).
+baseline_cpu=133
+
+# first_playback_delay_us
+# Delay before the very first BGM start after plugin load.
+# 5000000 = 5.0 s
+# Helps avoid crackling right after boot, while VSH is still initializing.
+first_playback_delay_us=5000000
+
+# loop_sleep_us
+# Main playback loop sleep.
+# Smaller values react faster but increase CPU wakeups.
+# 10000 = 0.01 s
+# Keeps CPU usage lower while still checking state frequently.
+loop_sleep_us=10000
+
+# pause_sleep_us
+# Sleep while BGM is paused (other audio, mute, overlay, etc).
+# 100000 = 0.1 s
+# Prevents busy-looping during pause conditions.
+pause_sleep_us=100000
+
+# check_interval_loops
+# Re-check pause conditions every N loop iterations.
+# Lower = faster reaction, higher = less overhead.
+# Balances responsiveness against polling overhead.
+check_interval_loops=3
+
+# io_spike_threshold_us
+# If MP3 decode takes longer than this, it is treated as I/O contention.
+# 50000 = 0.05 s
+# Detects moments when Memory Stick activity is too high for smooth playback.
+io_spike_threshold_us=50000
+
+# io_pause_window_us
+# Temporary pause duration after I/O spike detection.
+# 1200000 = 1.2 s
+# Gives the storage subsystem time to settle before BGM resumes.
+io_pause_window_us=1200000
+
+# audio_resume_delay_us
+# Delay before BGM resumes after external audio activity ended.
+# Helps to prevent BGM leaks right after game/logo audio.
+# 3000000 = 3.0 s
+# Avoids short accidental BGM bursts between VSH/game audio transitions.
+audio_resume_delay_us=3000000
+
+# enable_idle_dim_pause
+# Pause BGM when XMB enters idle dim/underclock state.
+# Prevents crackling sound during screen dimming and sleep-related power state changes.
+enable_idle_dim_pause=1
+
+# enable_mute_pause
+# Pause BGM when system mute is enabled or system volume is zero.
+# Also prevents unnecessary Memory Stick LED blinking while muted.
+enable_mute_pause=1
+
+# enable_overlay_pause
+# Pause BGM while ARK overlay / VSH menu is open.
+# Prevents crackling while ARK VSH menu is active.
+enable_overlay_pause=1
+
+# enable_io_pause
+# Enable automatic pause on Memory Stick I/O spikes.
+enable_io_pause=1
