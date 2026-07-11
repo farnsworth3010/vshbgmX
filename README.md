@@ -5,7 +5,8 @@ It plays user MP3 in VSH (XMB) and prioritizes stable playback by auto-pausing i
 
 ## Demo 🎬
 
-<video src="https://github.com/farnsworth3010/vshbgmX/raw/refs/heads/main/demo/demo.mp4" width="320" height="240" controls></video>
+[<video src="https://github.com/farnsworth3010/vshbgmX/raw/refs/heads/main/demo/demo.mp4" width="320" height="240" controls></video>
+](https://private-user-images.githubusercontent.com/110492020/620491366-a04d9c05-8ce7-460a-9889-732f5094ceb2.mp4?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3ODM4MDg2NTAsIm5iZiI6MTc4MzgwODM1MCwicGF0aCI6Ii8xMTA0OTIwMjAvNjIwNDkxMzY2LWEwNGQ5YzA1LThjZTctNDYwYS05ODg5LTczMmY1MDk0Y2ViMi5tcDQ_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYwNzExJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDcxMVQyMjE5MTBaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT05ZTAyYmRhNTRhNDgwNzJhNjhiYWM3MWU1YzYzNzhhZGVkYTA1Mzg3NjkxYmYwODdhMjY4MmFlOWMyNzMwZWUyJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9dmlkZW8lMkZtcDQifQ.lzAtXfXns9T2pk4dc4lUc7D0fUP5bOGunALhuU63G0k)
 
 ## Highlights ✨
 
