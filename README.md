@@ -5,11 +5,7 @@ It plays user MP3 in VSH (XMB) and prioritizes stable playback by auto-pausing i
 
 ## Demo 🎬
 
-<video src="https://raw.githubusercontent.com/farnsworth3010/vshbgmX/main/demo/demo.mp4" width="320" height="240" controls>
-  Your browser does not support embedded video playback.
-</video>
-
-Fallback: [Open demo.mp4 directly](demo/demo.mp4)
+https://github.com/user-attachments/assets/fc5161b6-970e-4cdc-8b55-404c2667c6e7
 
 ## Highlights ✨
 
