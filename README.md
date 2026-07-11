@@ -1,7 +1,7 @@
 # vshbgmX
 
 vshbgmX is an enhanced fork of the original vshbgm Koutsie's PSP plugin.
-It plays user MP3 in VSH (XMB) and prioritizes stable playback by auto-pausing in conflict-prone states.
+It plays user MP3 in VSH (XMB) and prioritizes stable playback by auto-pausing.
 
 ## Demo
 
