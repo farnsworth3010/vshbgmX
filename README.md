@@ -111,13 +111,8 @@ Units:
 - No music plays:
   - Verify plugin line path and that VSH plugin is enabled.
   - Verify MP3 path is exactly one of the supported locations.
-  - Re-encode the MP3 with the FFmpeg command above.
 - Crackling/stutter:
   - Keep `enable_io_pause=1` and `enable_idle_dim_pause=1`.
-  - Increase `io_pause_window_us` slightly.
-- Unexpected pauses:
-  - Check `enable_mute_pause` and system mute/volume state.
-  - Check if ARK overlay is open.
 
 ## Known Issues ⚠️
 
