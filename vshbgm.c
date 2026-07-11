@@ -312,94 +312,56 @@ static int simple_atoi(const char *s) {
 }
 
 static int SaveConfig(const BgmConfig *cfg) {
-  char out[4096];
+  static char out[4096];
   int len = snprintf(
       out, sizeof(out),
       "# vshbgmX config example\n"
       "# Place this file on PSP as:\n"
       "#   ms0:/seplugins/vshbgmX_config.txt\n"
-      "# If missing, the plugin will create this file automatically with default values.\n"
-      "#\n"
+      "# Compact template: detailed explanations are in README.\n"
       "# All *_us values are in microseconds.\n"
       "# Feature flags: 1 = enabled, 0 = disabled.\n"
       "\n"
-      "# enable_plugin\n"
-      "# Master switch for the plugin itself.\n"
-      "# Will be needed in the future, when this plugin\n"
-      "# gets its own settings in the interface.\n"
+      "# Master enable switch\n"
       "enable_plugin=%d\n"
       "\n"
-      "# volume_percent\n"
-      "# BGM volume in percent, from 0 to 100.\n"
+      "# BGM volume in percent (0..100)\n"
       "volume_percent=%d\n"
       "\n"
-      "# baseline_cpu\n"
-      "# Normal XMB CPU clock used as fallback for idle-dim detection.\n"
-      "# Helps pause BGM before power-saving states where crackling can appear\n"
-      "# (screen dimming/sleep transitions).\n"
+      "# Baseline CPU clock for idle-dim detection\n"
       "baseline_cpu=%d\n"
       "\n"
-      "# first_playback_delay_us\n"
-      "# Delay before the very first BGM start after plugin load.\n"
-      "# 5000000 = 5.0 s\n"
-      "# Helps avoid crackling right after boot, while VSH is still initializing.\n"
+      "# Delay before first playback\n"
       "first_playback_delay_us=%d\n"
       "\n"
-      "# loop_sleep_us\n"
-      "# Main playback loop sleep.\n"
-      "# Smaller values react faster but increase CPU wakeups.\n"
-      "# 10000 = 0.01 s\n"
-      "# Keeps CPU usage lower while still checking state frequently.\n"
+      "# Main loop sleep\n"
       "loop_sleep_us=%d\n"
       "\n"
-      "# pause_sleep_us\n"
-      "# Sleep while BGM is paused (other audio, mute, overlay, etc).\n"
-      "# 100000 = 0.1 s\n"
-      "# Prevents busy-looping during pause conditions.\n"
+      "# Sleep while paused\n"
       "pause_sleep_us=%d\n"
       "\n"
-      "# check_interval_loops\n"
-      "# Re-check pause conditions every N loop iterations.\n"
-      "# Lower = faster reaction, higher = less overhead.\n"
-      "# Balances responsiveness against polling overhead.\n"
+      "# Pause-state check interval\n"
       "check_interval_loops=%d\n"
       "\n"
-      "# io_spike_threshold_us\n"
-      "# If MP3 decode takes longer than this, it is treated as I/O contention.\n"
-      "# 50000 = 0.05 s\n"
-      "# Detects moments when Memory Stick activity is too high for smooth playback.\n"
+      "# Decode-time threshold for IO contention\n"
       "io_spike_threshold_us=%d\n"
       "\n"
-      "# io_pause_window_us\n"
-      "# Temporary pause duration after I/O spike detection.\n"
-      "# 1200000 = 1.2 s\n"
-      "# Gives the storage subsystem time to settle before BGM resumes.\n"
+      "# Pause window after IO spike\n"
       "io_pause_window_us=%d\n"
       "\n"
-      "# audio_resume_delay_us\n"
-      "# Delay before BGM resumes after external audio activity ended.\n"
-      "# Helps to prevent BGM leaks right after game/logo audio.\n"
-      "# 3000000 = 3.0 s\n"
-      "# Avoids short accidental BGM bursts between VSH/game audio transitions.\n"
+      "# Delay before resuming after external audio\n"
       "audio_resume_delay_us=%d\n"
       "\n"
-      "# enable_idle_dim_pause\n"
-      "# Pause BGM when XMB enters idle dim/underclock state.\n"
-      "# Prevents crackling sound during screen dimming and sleep-related power state changes.\n"
+      "# Pause on idle dim/underclock\n"
       "enable_idle_dim_pause=%d\n"
       "\n"
-      "# enable_mute_pause\n"
-      "# Pause BGM when system mute is enabled or system volume is zero.\n"
-      "# Also prevents unnecessary Memory Stick LED blinking while muted.\n"
+      "# Pause on mute or zero volume\n"
       "enable_mute_pause=%d\n"
       "\n"
-      "# enable_overlay_pause\n"
-      "# Pause BGM while ARK overlay / VSH menu is open.\n"
-      "# Prevents crackling while ARK VSH menu is active.\n"
+      "# Pause while overlay/menu is active\n"
       "enable_overlay_pause=%d\n"
       "\n"
-      "# enable_io_pause\n"
-      "# Enable automatic pause on Memory Stick I/O spikes.\n"
+      "# Enable auto-pause on IO spikes\n"
       "enable_io_pause=%d\n",
       cfg->enable_plugin ? 1 : 0, cfg->volume_percent, cfg->baseline_cpu,
       cfg->first_playback_delay_us, cfg->loop_sleep_us, cfg->pause_sleep_us,
@@ -484,7 +446,7 @@ static void LoadConfig(BgmConfig *cfg) {
     return;
   }
 
-  char buf[4096];
+  static char buf[4096];
   int len = sceIoRead(fd, buf, sizeof(buf) - 1);
   sceIoClose(fd);
   if (len <= 0)
@@ -569,7 +531,7 @@ static int vshbgmX_thread(SceSize args, void *argp) {
   DecodeData mp3;
   BgmConfig cfg;
   int first_playback = 1;
-  LoadConfig(&cfg);
+  set_default_config(&cfg);
 
   // If decode time spikes under heavy Memory Stick I/O, temporarily pause BGM
   // instead of outputting stuttered chunks.
@@ -581,6 +543,10 @@ static int vshbgmX_thread(SceSize args, void *argp) {
     sceKernelDelayThread(100000);
   while (!sceKernelFindModuleByName("sceVshCommonGui_Module"))
     sceKernelDelayThread(100000);
+
+  // Load/create config before audio module load and hook setup.
+  LoadConfig(&cfg);
+
   sceKernelDelayThread(1000000);
   sceUtilityLoadAvModule(PSP_AV_MODULE_AVCODEC);
 
@@ -632,6 +598,7 @@ restart:;
 
   while (!stop) {
     u32 now = sceKernelGetSystemTimeLow();
+
     sceKernelDelayThread(cfg.loop_sleep_us);
 
     if (!g_plugin_enabled) {
@@ -723,7 +690,7 @@ restart:;
 
 int module_start(SceSize args, void *argp) {
   sceKernelRegisterSysEventHandler(&bgm_events);
-  if ((bgm_thid = sceKernelCreateThread("vshbgmX", vshbgmX_thread, 0x12, 0x1000,
+  if ((bgm_thid = sceKernelCreateThread("vshbgmX", vshbgmX_thread, 0x12, 0x4000,
                                         0, NULL)) >= 0)
     sceKernelStartThread(bgm_thid, 0, 0);
   return 0;

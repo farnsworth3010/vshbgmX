@@ -57,6 +57,52 @@ Use template file in repo root as an example:
 
 - `vshbgmX_config.example.txt`
 
+Parameter reference:
+
+- `enable_plugin`
+  - Master on/off switch for plugin logic.
+  - `1` = enabled, `0` = disabled.
+- `volume_percent`
+  - BGM output level (0..100).
+  - Practical range is usually `30..70`.
+- `baseline_cpu`
+  - Baseline CPU MHz used by idle-dim pause detection.
+  - If current CPU falls below this value and `enable_idle_dim_pause=1`, playback pauses.
+- `first_playback_delay_us`
+  - Delay before first playback after plugin startup.
+  - Helps avoid boot-time crackling while VSH is still stabilizing.
+- `loop_sleep_us`
+  - Main loop sleep interval.
+  - Lower values react faster but increase wakeups/CPU overhead.
+- `pause_sleep_us`
+  - Sleep interval while playback is paused by conditions.
+  - Prevents busy-looping during pause states.
+- `check_interval_loops`
+  - How often pause conditions are re-evaluated.
+  - Lower = faster reaction, higher = less overhead.
+- `io_spike_threshold_us`
+  - Decode-time threshold that marks an I/O spike.
+  - Spikes trigger temporary pause when `enable_io_pause=1`.
+- `io_pause_window_us`
+  - Pause duration after an I/O spike is detected.
+  - Increase this if crackling appears during heavy folder browsing.
+- `audio_resume_delay_us`
+  - Delay before resuming BGM after external audio ends.
+  - Reduces short BGM leaks between system/game audio transitions.
+- `enable_idle_dim_pause`
+  - Pause BGM during idle dim/underclock state.
+- `enable_mute_pause`
+  - Pause BGM when mute is active or system volume is zero.
+- `enable_overlay_pause`
+  - Pause BGM while ARK/VSH overlay is open.
+- `enable_io_pause`
+  - Enable automatic pause on detected Memory Stick I/O spikes.
+
+Units:
+
+- Any key ending with `_us` uses microseconds.
+- Boolean flags use `1` or `0`.
+
 ## Troubleshooting 🛠️
 
 - No music plays:
